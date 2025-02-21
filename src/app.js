@@ -3,26 +3,71 @@ const connectDB = require("./config/database");
 const User = require("./models/user");
 
 const app = express();
+app.use(express.json());
 
 app.post("/signup", async (req, res) => {
-
-    const user = new User({
-        firstName : "Vivek",
-        lastName : "Atreya",
-        password : "Vivek@1234",
-        email : "Vivek@Atreya.com",
-        age : 28,
-        gender : "Male"
-    });
-
+    const user = new User(req.body);
     try{
         const id = await user.save();
         console.log(id);
         res.send("User added successfully");
     }
     catch(err){
-        res.send("Error");
-        console.log(err);
+        res.status(400).send("FAILED " + err.message);
+    }
+});
+
+app.get("/feed", async (req,res) => {
+    try {
+        const users = await User.find({})
+        res.send(users);
+    } catch (error) {
+        res.status(400).send("FAILED " + error.message);
+    }
+});
+
+app.get("/user", async (req, res) => {
+    const email = req.body.email;
+    try {
+        const user = await User.findOne({email : email});
+        res.send(user);
+        
+    } catch (error) {
+        res.status(400).send("FAILED " + error.message);
+    }
+});
+
+app.delete("/user/:userId", async (req, res) => {
+    const userId = req.params?.userId;
+    try {
+        const user = await User.findByIdAndDelete(userId);
+        console.log(user);
+        res.send("User deleted successfully");
+    } catch (error) {
+        res.status(400).send("DELETE FAILED " + error.message);
+    }
+});
+
+app.patch("/user/:userId", async (req,res) => {
+    const userId = req.params?.userId;
+    const data = req.body;
+    const ALLOWED_UPDATE = ["firstName", "lastName", "age", "gender"]
+    try {
+
+        const isUpdateAllowed = Object.keys(data).every((k) => ALLOWED_UPDATE.includes(k));
+        if(!isUpdateAllowed){
+            throw new Error("Update not allowed");
+        }
+        const user = await User.findByIdAndUpdate(userId, data, {
+            returnDocument:'after',
+            runValidators:'true'
+        })
+
+        console.log(user);
+        res.send("User updated successfully");
+        
+    } catch (error) {
+        res.status(400).send("UPDATE FAILED " + error.message);
     }
 })
 
